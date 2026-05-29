@@ -989,7 +989,7 @@ def export_data(request):
         # Calcular métricas de forma coherente
         # Usar prefetch_related para optimizar consultas
         compras_base = compras_base.prefetch_related(
-            Prefetch('ventanacional', 
+            Prefetch('ventas', 
                      queryset=VentaNacional.objects.prefetch_related(
                          'reportecalidadexportador',
                          'reportecalidadexportador__reportecalidadproveedor'
@@ -1021,18 +1021,23 @@ def export_data(request):
         
         total_reportes_pendientes = 0
         for compra in compras_base:
-            tiene_venta = hasattr(compra, 'ventanacional')
-            tiene_reporte_exp = False
-            tiene_reporte_prov = False
+            ventas = compra.ventas.all()
+            if not ventas.exists():
+                total_reportes_pendientes += 1
+                continue
             
-            if tiene_venta:
-                venta = compra.ventanacional
+            compra_completa = True
+            for venta in ventas:
                 tiene_reporte_exp = hasattr(venta, 'reportecalidadexportador')
+                tiene_reporte_prov = False
                 if tiene_reporte_exp:
-                    reporte_exp = venta.reportecalidadexportador
-                    tiene_reporte_prov = hasattr(reporte_exp, 'reportecalidadproveedor')
-                    
-            if not (tiene_venta and tiene_reporte_exp and tiene_reporte_prov):
+                    tiene_reporte_prov = hasattr(venta.reportecalidadexportador, 'reportecalidadproveedor')
+                
+                if not (tiene_reporte_exp and tiene_reporte_prov):
+                    compra_completa = False
+                    break
+            
+            if not compra_completa:
                 total_reportes_pendientes += 1
         
         # Escribir KPIs en el Excel
@@ -1074,18 +1079,23 @@ def export_data(request):
             # Contar reportes pendientes
             reportes_pendientes = 0
             for compra in compras:
-                tiene_venta = hasattr(compra, 'ventanacional')
-                tiene_reporte_exp = False
-                tiene_reporte_prov = False
+                ventas = compra.ventas.all()
+                if not ventas.exists():
+                    reportes_pendientes += 1
+                    continue
                 
-                if tiene_venta:
-                    venta = compra.ventanacional
+                compra_completa = True
+                for venta in ventas:
                     tiene_reporte_exp = hasattr(venta, 'reportecalidadexportador')
+                    tiene_reporte_prov = False
                     if tiene_reporte_exp:
-                        reporte_exp = venta.reportecalidadexportador
-                        tiene_reporte_prov = hasattr(reporte_exp, 'reportecalidadproveedor')
-                        
-                if not (tiene_venta and tiene_reporte_exp and tiene_reporte_prov):
+                        tiene_reporte_prov = hasattr(venta.reportecalidadexportador, 'reportecalidadproveedor')
+                    
+                    if not (tiene_reporte_exp and tiene_reporte_prov):
+                        compra_completa = False
+                        break
+                
+                if not compra_completa:
                     reportes_pendientes += 1
             
             # Calcular valores totales coherentes con los totales generales
