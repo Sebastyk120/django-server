@@ -683,166 +683,167 @@ def export_data(request):
         
         # Escribir datos
         for compra in compras:
-            # Usar las posiciones iniciales calculadas anteriormente para cada sección
+            ventas = compra.ventas.all()
+            ventas_list = list(ventas) if ventas.exists() else [None]
             
-            # Compra Nacional
-            if 'compra_nacional' in data_types:
-                col = compra_start
-                sheet_relacionados.write(row, col, compra.id, cell_format)
-                col += 1
-                sheet_relacionados.write(row, col, compra.proveedor.nombre, cell_format)
-                col += 1
-                sheet_relacionados.write(row, col, compra.origen_compra, cell_format)
-                col += 1
-                sheet_relacionados.write(row, col, compra.fruta.nombre, cell_format)
-                col += 1
-                sheet_relacionados.write(row, col, float(compra.peso_compra), number_format)
-                col += 1
-                sheet_relacionados.write(row, col, compra.fecha_compra, date_format)
-                col += 1
-                sheet_relacionados.write(row, col, compra.numero_guia, cell_format)
-                col += 1
-                sheet_relacionados.write(row, col, compra.remision or 'N/A', cell_format)
-                col += 1
-                sheet_relacionados.write(row, col, float(compra.precio_compra_exp), currency_format)
-                col += 1
-                sheet_relacionados.write(row, col, float(compra.precio_compra_nal) if compra.precio_compra_nal else 0, currency_format)
-                col += 1
-                sheet_relacionados.write(row, col, compra.tipo_empaque.nombre, cell_format)
-                col += 1
-                sheet_relacionados.write(row, col, compra.cantidad_empaque, cell_format)
-            
-            # Venta Nacional
-            if 'venta_nacional' in data_types:
-                col = venta_start
-                try:
-                    venta = compra.ventas.first()
-                    if not venta:
-                        raise Exception('No venta')
-                    sheet_relacionados.write(row, col, venta.exportador.nombre, cell_format)
+            for venta in ventas_list:
+                # Usar las posiciones iniciales calculadas anteriormente para cada sección
+                
+                # Compra Nacional
+                if 'compra_nacional' in data_types:
+                    col = compra_start
+                    sheet_relacionados.write(row, col, compra.id, cell_format)
                     col += 1
-                    sheet_relacionados.write(row, col, venta.fecha_llegada, date_format)
+                    sheet_relacionados.write(row, col, compra.proveedor.nombre, cell_format)
                     col += 1
-                    sheet_relacionados.write(row, col, venta.fecha_vencimiento, date_format)
+                    sheet_relacionados.write(row, col, compra.origen_compra, cell_format)
                     col += 1
-                    sheet_relacionados.write(row, col, venta.cantidad_empaque_recibida, cell_format)
+                    sheet_relacionados.write(row, col, compra.fruta.nombre, cell_format)
                     col += 1
-                    sheet_relacionados.write(row, col, float(venta.peso_bruto_recibido), number_format)
+                    sheet_relacionados.write(row, col, float(compra.peso_compra), number_format)
                     col += 1
-                    sheet_relacionados.write(row, col, float(venta.peso_neto_recibido), number_format)
+                    sheet_relacionados.write(row, col, compra.fecha_compra, date_format)
                     col += 1
-                    sheet_relacionados.write(row, col, float(venta.diferencia_peso) if venta.diferencia_peso else 0, number_format)
+                    sheet_relacionados.write(row, col, compra.numero_guia, cell_format)
                     col += 1
-                    sheet_relacionados.write(row, col, venta.diferencia_empaque if venta.diferencia_empaque else 0, cell_format)
-                except:
-                    for i in range(venta_nacional_cols):
-                        sheet_relacionados.write(row, col + i, 'N/A', cell_format)
-            
-            # Reporte Calidad Exportador
-            if 'reporte_exportador' in data_types:
-                col = reporte_exp_start
-                try:
-                    venta = compra.ventas.first()
-                    if not venta:
-                        raise Exception('No venta')
-                    reporte_exp = venta.reportecalidadexportador
-                    sheet_relacionados.write(row, col, reporte_exp.remision_exp or 'N/A', cell_format)
+                    sheet_relacionados.write(row, col, compra.remision or 'N/A', cell_format)
                     col += 1
-                    sheet_relacionados.write(row, col, reporte_exp.fecha_reporte, date_format)
+                    sheet_relacionados.write(row, col, float(compra.precio_compra_exp), currency_format)
                     col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.kg_totales), number_format)
+                    sheet_relacionados.write(row, col, float(compra.precio_compra_nal) if compra.precio_compra_nal else 0, currency_format)
                     col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.kg_exportacion), number_format)
+                    sheet_relacionados.write(row, col, compra.tipo_empaque.nombre, cell_format)
                     col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.porcentaje_exportacion) / 100, percent_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.precio_venta_kg_exp), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.kg_nacional), number_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.porcentaje_nacional) / 100, percent_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.precio_venta_kg_nal), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.kg_merma), number_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.porcentaje_merma) / 100, percent_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_exp.precio_total), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, reporte_exp.factura or 'N/A', cell_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, reporte_exp.fecha_factura or '', date_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, reporte_exp.vencimiento_factura or '', date_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, reporte_exp.estado_reporte_exp, cell_format)
-                except:
-                    for i in range(reporte_exp_cols):
-                        sheet_relacionados.write(row, col + i, 'N/A', cell_format)
-            
-            # Reporte Calidad Proveedor
-            if 'reporte_proveedor' in data_types:
-                col = reporte_prov_start
-                try:
-                    venta = compra.ventas.first()
-                    if not venta:
-                        raise Exception('No venta')
-                    reporte_prov = venta.reportecalidadexportador.reportecalidadproveedor
-                    sheet_relacionados.write(row, col, reporte_prov.p_fecha_reporte, date_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_kg_totales), number_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_kg_exportacion), number_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_porcentaje_exportacion) / 100, percent_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_precio_kg_exp), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_kg_nacional), number_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_porcentaje_nacional) / 100, percent_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_precio_kg_nal), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_kg_merma), number_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_porcentaje_merma) / 100, percent_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_total_facturar), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.asohofrucol), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.rte_fte), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.rte_ica), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_total_pagar), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.monto_pendiente), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_utilidad), currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_utilidad_sin_ajuste) if reporte_prov.p_utilidad_sin_ajuste else 0, currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.diferencia_utilidad) if reporte_prov.diferencia_utilidad else 0, currency_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, float(reporte_prov.p_porcentaje_utilidad) / 100, percent_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, "Sí" if reporte_prov.reporte_enviado else "No", cell_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, reporte_prov.factura_prov or "N/A", cell_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, "Sí" if reporte_prov.reporte_pago else "No", cell_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, reporte_prov.estado_reporte_prov, cell_format)
-                    col += 1
-                    sheet_relacionados.write(row, col, "Sí" if reporte_prov.completado else "No", cell_format)
-                except:
-                    for i in range(reporte_prov_cols):
-                        sheet_relacionados.write(row, col + i, 'N/A', cell_format)
-            
-            row += 1
+                    sheet_relacionados.write(row, col, compra.cantidad_empaque, cell_format)
+                
+                # Venta Nacional
+                if 'venta_nacional' in data_types:
+                    col = venta_start
+                    try:
+                        if not venta:
+                            raise Exception('No venta')
+                        sheet_relacionados.write(row, col, venta.exportador.nombre, cell_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, venta.fecha_llegada, date_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, venta.fecha_vencimiento, date_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, venta.cantidad_empaque_recibida, cell_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(venta.peso_bruto_recibido), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(venta.peso_neto_recibido), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(venta.diferencia_peso) if venta.diferencia_peso else 0, number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, venta.diferencia_empaque if venta.diferencia_empaque else 0, cell_format)
+                    except:
+                        for i in range(venta_nacional_cols):
+                            sheet_relacionados.write(row, col + i, 'N/A', cell_format)
+                
+                # Reporte Calidad Exportador
+                if 'reporte_exportador' in data_types:
+                    col = reporte_exp_start
+                    try:
+                        if not venta:
+                            raise Exception('No venta')
+                        reporte_exp = venta.reportecalidadexportador
+                        sheet_relacionados.write(row, col, reporte_exp.remision_exp or 'N/A', cell_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, reporte_exp.fecha_reporte, date_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.kg_totales), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.kg_exportacion), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.porcentaje_exportacion) / 100, percent_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.precio_venta_kg_exp), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.kg_nacional), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.porcentaje_nacional) / 100, percent_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.precio_venta_kg_nal), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.kg_merma), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.porcentaje_merma) / 100, percent_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_exp.precio_total), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, reporte_exp.factura or 'N/A', cell_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, reporte_exp.fecha_factura or '', date_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, reporte_exp.vencimiento_factura or '', date_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, reporte_exp.estado_reporte_exp, cell_format)
+                    except:
+                        for i in range(reporte_exp_cols):
+                            sheet_relacionados.write(row, col + i, 'N/A', cell_format)
+                
+                # Reporte Calidad Proveedor
+                if 'reporte_proveedor' in data_types:
+                    col = reporte_prov_start
+                    try:
+                        if not venta:
+                            raise Exception('No venta')
+                        reporte_prov = venta.reportecalidadexportador.reportecalidadproveedor
+                        sheet_relacionados.write(row, col, reporte_prov.p_fecha_reporte, date_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_kg_totales), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_kg_exportacion), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_porcentaje_exportacion) / 100, percent_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_precio_kg_exp), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_kg_nacional), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_porcentaje_nacional) / 100, percent_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_precio_kg_nal), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_kg_merma), number_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_porcentaje_merma) / 100, percent_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_total_facturar), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.asohofrucol), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.rte_fte), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.rte_ica), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_total_pagar), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.monto_pendiente), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_utilidad), currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_utilidad_sin_ajuste) if reporte_prov.p_utilidad_sin_ajuste else 0, currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.diferencia_utilidad) if reporte_prov.diferencia_utilidad else 0, currency_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, float(reporte_prov.p_porcentaje_utilidad) / 100, percent_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, "Sí" if reporte_prov.reporte_enviado else "No", cell_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, reporte_prov.factura_prov or "N/A", cell_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, "Sí" if reporte_prov.reporte_pago else "No", cell_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, reporte_prov.estado_reporte_prov, cell_format)
+                        col += 1
+                        sheet_relacionados.write(row, col, "Sí" if reporte_prov.completado else "No", cell_format)
+                    except:
+                        for i in range(reporte_prov_cols):
+                            sheet_relacionados.write(row, col + i, 'N/A', cell_format)
+                
+                row += 1
         
         # Definir anchos de columna para cada sección
         section_widths = {
