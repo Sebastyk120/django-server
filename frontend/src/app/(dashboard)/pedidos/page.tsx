@@ -280,7 +280,12 @@ function OrdersPageContent() {
             }
         };
 
-        fetchOrders();
+        // Debounce text-based filter changes to avoid firing on every keystroke
+        const debounceTimer = setTimeout(() => {
+            fetchOrders();
+        }, 400);
+
+        return () => clearTimeout(debounceTimer);
     }, [page, pageSize, filters, refreshTrigger]);
 
     const handleToggleColumn = (key: keyof Pedido) => {

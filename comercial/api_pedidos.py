@@ -173,7 +173,7 @@ class PedidoFilter(FilterSet):
     pedido_id = CharFilter(field_name='id', lookup_expr='exact')
     cliente = CharFilter(field_name='cliente__nombre', lookup_expr='icontains')
     intermediario = CharFilter(field_name='intermediario__nombre', lookup_expr='icontains')
-    numero_factura = CharFilter(field_name='numero_factura', lookup_expr='icontains')
+    numero_factura = CharFilter(field_name='numero_factura', lookup_expr='istartswith')
     estado_pedido = CharFilter(field_name='estado_pedido', lookup_expr='exact')
     fecha_desde = DateFilter(field_name='fecha_entrega', lookup_expr='gte')
     fecha_hasta = DateFilter(field_name='fecha_entrega', lookup_expr='lte')
@@ -194,7 +194,7 @@ class PedidoFilter(FilterSet):
             Q(id__icontains=value) |
             Q(awb__icontains=value) |
             Q(cliente__nombre__icontains=value) |
-            Q(numero_factura__icontains=value)
+            Q(numero_factura__istartswith=value)
         )
 
 
