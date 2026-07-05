@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import pandas as pd
 import numpy as np
 from decimal import Decimal
@@ -162,12 +162,15 @@ class ProyeccionVentasAPIView(APIView):
             'valor_x_producto': 'valor'
         })
         
-        df['ds'] = pd.to_datetime(df['ds'])
+        df.loc[:, 'ds'] = df['ds'].map(self._coerce_date_value)
+        df = df.loc[df['ds'].notna()].copy()
+        if df.empty:
+            return pd.DataFrame(columns=['ds', 'fecha', 'cliente', 'fruta', 'kilos', 'cajas', 'valor'])
         
         for col in ['kilos', 'cajas', 'valor']:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            df.loc[:, col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             
-        df['fecha'] = df['ds'].dt.strftime('%Y-%m-%d')
+        df.loc[:, 'fecha'] = df['ds'].map(self._format_date)
         
         return df.sort_values('ds')
 
@@ -176,14 +179,14 @@ class ProyeccionVentasAPIView(APIView):
             return pd.DataFrame(), {'algorithm': 'none', 'reason': 'no_data'}
             
         monthly_df = df.copy()
-        monthly_df['ds'] = monthly_df['ds'].apply(lambda x: x.replace(day=1))
+        monthly_df.loc[:, 'ds'] = monthly_df['ds'].map(self._month_start)
         
         monthly_agg = monthly_df.groupby('ds').agg({
             'kilos': 'sum', 'cajas': 'sum', 'valor': 'sum'
         }).reset_index().sort_values('ds')
         
         last_date = monthly_agg['ds'].max()
-        start_trend_window = last_date - pd.DateOffset(months=3)
+        start_trend_window = self._add_months(last_date, -3)
         
         recent_data = monthly_agg[monthly_agg['ds'] > start_trend_window]
         
@@ -192,8 +195,8 @@ class ProyeccionVentasAPIView(APIView):
         if len(monthly_agg) >= 15:
             for metric in ['kilos', 'cajas', 'valor']:
                 recent_sum = recent_data[metric].sum()
-                prev_year_start = start_trend_window - pd.DateOffset(years=1)
-                prev_year_end = last_date - pd.DateOffset(years=1)
+                prev_year_start = self._add_years(start_trend_window, -1)
+                prev_year_end = self._add_years(last_date, -1)
                 
                 prev_data = monthly_agg[
                     (monthly_agg['ds'] > prev_year_start) & 
@@ -211,9 +214,9 @@ class ProyeccionVentasAPIView(APIView):
         last_known_date = monthly_agg['ds'].max()
         
         for i in range(1, months + 1):
-            future_date = last_known_date + pd.DateOffset(months=i)
+            future_date = self._add_months(last_known_date, i)
             target_month = future_date.month
-            prev_year_date = future_date - pd.DateOffset(years=1)
+            prev_year_date = self._add_years(future_date, -1)
             
             prev_val_row = monthly_agg[monthly_agg['ds'] == prev_year_date]
             
@@ -229,7 +232,7 @@ class ProyeccionVentasAPIView(APIView):
                 if not prev_val_row.empty:
                     base_val = prev_val_row.iloc[0][metric]
                 else:
-                    month_avgs = monthly_agg[monthly_agg['ds'].dt.month == target_month]
+                    month_avgs = monthly_agg[monthly_agg['ds'].map(lambda value: value.month) == target_month]
                     if not month_avgs.empty:
                         base_val = month_avgs[metric].mean()
                 
@@ -250,7 +253,7 @@ class ProyeccionVentasAPIView(APIView):
             return {'seasonal_clients': [], 'seasonal_fruits': []}
             
         df = df.copy()
-        df['month'] = df['ds'].dt.month
+        df.loc[:, 'month'] = df['ds'].map(lambda value: value.month)
         month_names = {i: calendar.month_name[i] for i in range(1, 13)}
         
         seasonal_clients = []
@@ -311,8 +314,8 @@ class ProyeccionVentasAPIView(APIView):
             return {'new_customers': [], 'lost_customers': [], 'growing_customers': [], 'declining_customers': []}
             
         last_date = df['ds'].max()
-        cutoff_current = last_date - pd.DateOffset(years=1)
-        cutoff_previous = last_date - pd.DateOffset(years=2)
+        cutoff_current = self._add_years(last_date, -1)
+        cutoff_previous = self._add_years(last_date, -2)
         
         current_period = df[df['ds'] > cutoff_current]
         previous_period = df[(df['ds'] > cutoff_previous) & (df['ds'] <= cutoff_current)]
@@ -412,7 +415,7 @@ class ProyeccionVentasAPIView(APIView):
         
         f_df = forecast_df.copy()
         f_df['Tipo'] = 'Proyección'
-        f_df['fecha'] = f_df['ds'].dt.strftime('%Y-%m-%d')
+        f_df.loc[:, 'fecha'] = f_df['ds'].map(self._format_date)
         
         # Combine
         export_df = pd.concat([f_df, h_df], ignore_index=True)
@@ -451,3 +454,45 @@ class ProyeccionVentasAPIView(APIView):
         )
         response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
+
+    @staticmethod
+    def _coerce_date_value(value):
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if hasattr(value, 'to_pydatetime'):
+            return value.to_pydatetime().date()
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return None
+            try:
+                return datetime.fromisoformat(text).date()
+            except ValueError:
+                try:
+                    return date.fromisoformat(text[:10])
+                except ValueError:
+                    return None
+        return None
+
+    @staticmethod
+    def _format_date(value):
+        return value.strftime('%Y-%m-%d') if hasattr(value, 'strftime') else str(value)
+
+    @staticmethod
+    def _month_start(value):
+        return value.replace(day=1)
+
+    @staticmethod
+    def _add_months(value, months):
+        month_index = value.month - 1 + months
+        year = value.year + month_index // 12
+        month = month_index % 12 + 1
+        day = min(value.day, calendar.monthrange(year, month)[1])
+        return value.replace(year=year, month=month, day=day)
+
+    def _add_years(self, value, years):
+        return self._add_months(value, years * 12)
